@@ -54,4 +54,5 @@ if __name__ == "__main__":
     print(f"  LLM_MODEL: {LLM_MODEL}")
     print(f"  DATABASE_URL: {DATABASE_URL}")
     print(f"  PDF_PATH: {PDF_PATH}")
+    print(f"  PDF existe: {os.path.isfile(PDF_PATH)}")
     print(f"  Obrigatórias ausentes: {missing_vars()}")
