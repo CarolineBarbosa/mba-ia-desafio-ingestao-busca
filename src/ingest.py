@@ -1,13 +1,16 @@
 """Script de ingestão do PDF.
 
-Etapa 4 (atual): validação do caminho/arquivo e leitura do PDF.
-Sem embeddings e sem banco de dados ainda.
 """
 import os
 
 from langchain_community.document_loaders import PyPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from config import PDF_PATH
+
+# Parâmetros de fatiamento (requisito do desafio).
+CHUNK_SIZE = 1000
+CHUNK_OVERLAP = 150
 
 
 def load_pdf(pdf_path: str) -> list:
@@ -48,14 +51,43 @@ def validate_pdf_path(pdf_path: str) -> None:
         raise ValueError(f"O caminho informado não é um arquivo: {pdf_path}")
 
 
-def ingest() -> list:
-    """Orquestra a ingestão: valida o PDF e então o lê.
+def split_documents(docs: list) -> list:
+    """Fatia os documentos em chunks (CHUNK_SIZE caracteres, CHUNK_OVERLAP de overlap).
 
-    Nas próximas etapas, esta função também vai fatiar em chunks,
-    gerar embeddings e persistir no pgVector.
+    Devolve uma lista de `Document` menores, mantendo os metadados originais.
+    """
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=CHUNK_SIZE,
+        chunk_overlap=CHUNK_OVERLAP,
+    )
+    chunks = splitter.split_documents(docs)
+
+    tamanhos = [len(c.page_content) for c in chunks]
+    print(f"Total de chunks gerados: {len(chunks)}")
+    if tamanhos:
+        print(
+            f"Tamanho dos chunks — mínimo: {min(tamanhos)}, "
+            f"máximo: {max(tamanhos)}, média: {sum(tamanhos) // len(tamanhos)}"
+        )
+    print("\n")
+
+    for i, chunk in enumerate(chunks[:3]):
+        print(f"--- Chunk {i + 1} ({len(chunk.page_content)} caracteres) ---")
+        print(chunk.page_content[:200])
+        print("\n")
+
+    return chunks
+
+
+def ingest() -> list:
+    """Orquestra a ingestão: valida, lê o PDF e fatia em chunks.
+
+    Nas próximas etapas, esta função também vai gerar embeddings
+    e persistir no pgVector.
     """
     validate_pdf_path(PDF_PATH)
-    return load_pdf(PDF_PATH)
+    docs = load_pdf(PDF_PATH)
+    return split_documents(docs)
 
 
 if __name__ == "__main__":
