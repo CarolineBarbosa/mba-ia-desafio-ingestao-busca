@@ -14,7 +14,7 @@ load_dotenv()
 
 # --- Google AI Studio (Gemini) ---
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "models/text-embedding-004")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "models/gemini-embedding-001")
 LLM_MODEL = os.getenv("LLM_MODEL", "gemini-2.5-flash")
 
 # --- Banco de dados local (docker compose) ---

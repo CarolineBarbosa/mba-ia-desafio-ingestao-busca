@@ -4,9 +4,11 @@
 import os
 
 from langchain_community.document_loaders import PyPDFLoader
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from config import PDF_PATH
+from config import EMBEDDING_MODEL, PDF_PATH
 
 # Parâmetros de fatiamento (requisito do desafio).
 CHUNK_SIZE = 1000
@@ -79,6 +81,12 @@ def split_documents(docs: list) -> list:
     return chunks
 
 
+def get_embeddings() -> GoogleGenerativeAIEmbeddings:
+    """Retorna o modelo de embeddings configurado em `EMBEDDING_MODEL`."""
+    print(f"Modelo de embeddings configurado: {EMBEDDING_MODEL}")
+    return GoogleGenerativeAIEmbeddings(model=EMBEDDING_MODEL)
+
+
 def ingest() -> list:
     """Orquestra a ingestão: valida, lê o PDF e fatia em chunks.
 
@@ -87,7 +95,9 @@ def ingest() -> list:
     """
     validate_pdf_path(PDF_PATH)
     docs = load_pdf(PDF_PATH)
-    return split_documents(docs)
+    split_documents(docs)
+    get_embeddings()
+    return 0
 
 
 if __name__ == "__main__":
