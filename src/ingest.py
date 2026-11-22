@@ -5,14 +5,17 @@ import os
 
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
-
+from langchain_postgres import PGVector
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from config import EMBEDDING_MODEL, PDF_PATH
+from config import DATABASE_URL, EMBEDDING_MODEL, PDF_PATH
 
 # Parâmetros de fatiamento (requisito do desafio).
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 150
+
+# Nome da coleção no pgVector (isola os documentos deste RAG).
+COLLECTION_NAME = "rag_documentos"
 
 
 def load_pdf(pdf_path: str) -> list:
@@ -87,17 +90,30 @@ def get_embeddings() -> GoogleGenerativeAIEmbeddings:
     return GoogleGenerativeAIEmbeddings(model=EMBEDDING_MODEL)
 
 
-def ingest() -> list:
-    """Orquestra a ingestão: valida, lê o PDF e fatia em chunks.
+def persist_chunks(chunks: list) -> None:
+    """Gera os embeddings dos chunks e persiste no pgVector.
 
-    Nas próximas etapas, esta função também vai gerar embeddings
-    e persistir no pgVector.
+    `pre_delete_collection=True` recria a coleção do zero, evitando
+    duplicatas quando a ingestão roda mais de uma vez.
     """
+    PGVector.from_documents(
+        documents=chunks,
+        embedding=get_embeddings(),
+        collection_name=COLLECTION_NAME,
+        connection=DATABASE_URL,
+        use_jsonb=True,
+        pre_delete_collection=True,
+    )
+    print(f"Chunks persistidos no pgVector (coleção '{COLLECTION_NAME}'): {len(chunks)}")
+
+
+def ingest() -> list:
+    """Orquestra a ingestão: valida, lê, fatia e persiste no pgVector."""
     validate_pdf_path(PDF_PATH)
     docs = load_pdf(PDF_PATH)
-    split_documents(docs)
-    get_embeddings()
-    return 0
+    chunks = split_documents(docs)
+    persist_chunks(chunks)
+    return chunks
 
 
 if __name__ == "__main__":
