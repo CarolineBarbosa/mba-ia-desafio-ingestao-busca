@@ -123,11 +123,24 @@ Faça um fork do repositório para utilizar a estrutura abaixo: https://github.c
 
 ## VirtualEnv para Python
 
-Crie e ative um ambiente virtual antes de instalar dependências:
+Use Python 3.12 para este projeto. A versão fixada do NumPy pode não ter um
+wheel compatível com versões mais novas do Python; nesse caso, o `pip` tenta
+compilá-lo e exige o compilador C++ do Visual Studio.
+
+No Windows, crie e ative o ambiente virtual antes de instalar as dependências:
 
 ```
-python3 -m venv venv
+py -3.12 -m venv venv
+venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+```
+
+No Linux ou macOS:
+
+```
+python3.12 -m venv venv
 source venv/bin/activate
+python -m pip install -r requirements.txt
 ```
 
 ## Ordem de execução

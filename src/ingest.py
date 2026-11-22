@@ -2,6 +2,8 @@
 
 """
 import os
+import time
+from collections import deque
 
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
@@ -13,6 +15,11 @@ from config import DATABASE_URL, EMBEDDING_MODEL, PDF_PATH
 # Parâmetros de fatiamento (requisito do desafio).
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 150
+
+# Limite gratuito do Gemini: 30.000 tokens por minuto.
+EMBEDDING_BATCH_SIZE = 10
+EMBEDDING_TOKENS_PER_MINUTE = 24_000
+EMBEDDING_RATE_WINDOW_SECONDS = 60
 
 # Nome da coleção no pgVector (isola os documentos deste RAG).
 COLLECTION_NAME = "rag_documentos"
@@ -90,20 +97,71 @@ def get_embeddings() -> GoogleGenerativeAIEmbeddings:
     return GoogleGenerativeAIEmbeddings(model=EMBEDDING_MODEL)
 
 
+def wait_for_embedding_quota(
+    recent_batches: deque[tuple[float, int]],
+    estimated_tokens: int,
+) -> None:
+    """Espera se os lotes recentes puderem exceder a cota por minuto."""
+    if estimated_tokens > EMBEDDING_TOKENS_PER_MINUTE:
+        raise ValueError(
+            "Um lote excede o limite de tokens por minuto configurado."
+        )
+
+    while True:
+        now = time.monotonic()
+        while (
+            recent_batches
+            and now - recent_batches[0][0] >= EMBEDDING_RATE_WINDOW_SECONDS
+        ):
+            recent_batches.popleft()
+
+        used_tokens = sum(tokens for _, tokens in recent_batches)
+        if used_tokens + estimated_tokens <= EMBEDDING_TOKENS_PER_MINUTE:
+            recent_batches.append((now, estimated_tokens))
+            return
+
+        wait_seconds = (
+            EMBEDDING_RATE_WINDOW_SECONDS - (now - recent_batches[0][0])
+        )
+        print(
+            "Limite de embeddings por minuto próximo; "
+            f"aguardando {max(1, int(wait_seconds))} segundos..."
+        )
+        time.sleep(wait_seconds)
+
+
 def persist_chunks(chunks: list) -> None:
     """Gera os embeddings dos chunks e persiste no pgVector.
 
     `pre_delete_collection=True` recria a coleção do zero, evitando
     duplicatas quando a ingestão roda mais de uma vez.
     """
-    PGVector.from_documents(
-        documents=chunks,
-        embedding=get_embeddings(),
-        collection_name=COLLECTION_NAME,
-        connection=DATABASE_URL,
-        use_jsonb=True,
-        pre_delete_collection=True,
-    )
+    embeddings = get_embeddings()
+    vector_store = None
+    recent_batches: deque[tuple[float, int]] = deque()
+    batches = [
+        chunks[index : index + EMBEDDING_BATCH_SIZE]
+        for index in range(0, len(chunks), EMBEDDING_BATCH_SIZE)
+    ]
+
+    for batch_index, batch in enumerate(batches):
+        # Character count is a conservative proxy for tokens, leaving quota headroom.
+        estimated_tokens = sum(len(chunk.page_content) for chunk in batch)
+        wait_for_embedding_quota(recent_batches, estimated_tokens)
+        print(f"Persistindo lote {batch_index + 1}/{len(batches)}...")
+
+        if vector_store is None:
+            vector_store = PGVector.from_documents(
+                documents=batch,
+                embedding=embeddings,
+                collection_name=COLLECTION_NAME,
+                connection=DATABASE_URL,
+                use_jsonb=True,
+                pre_delete_collection=True,
+            )
+        else:
+            vector_store.add_documents(batch)
+
     print(f"Chunks persistidos no pgVector (coleção '{COLLECTION_NAME}'): {len(chunks)}")
 
 
