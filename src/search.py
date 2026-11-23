@@ -1,9 +1,10 @@
-"""Busca semântica: recupera os chunks mais relevantes do pgVector."""
+"""Busca semântica: recupera chunks e responde com o LLM."""
 import sys
 
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_postgres import PGVector
 
-from config import DATABASE_URL
+from config import DATABASE_URL, LLM_MODEL
 from ingest import COLLECTION_NAME, get_embeddings
 
 PROMPT_TEMPLATE = """
@@ -36,6 +37,10 @@ RESPONDA A "PERGUNTA DO USUÁRIO"
 # Quantos chunks mais semelhantes retornar na busca.
 TOP_K = 10
 
+# Resposta de fallback quando não há contexto suficiente.
+# Mantida em sincronia com o texto de fallback do PROMPT_TEMPLATE.
+FALLBACK_ANSWER = "Não tenho informações necessárias para responder sua pergunta."
+
 
 def build_vector_store() -> PGVector:
     """Conecta ao pgVector com a mesma coleção e modelo da ingestão."""
@@ -67,10 +72,32 @@ def show_results(question: str, results: list) -> None:
         print()
 
 
-def search_prompt(question=None):
-    pass
+def get_llm() -> ChatGoogleGenerativeAI:
+    """Retorna o modelo de chat configurado em `LLM_MODEL`."""
+    return ChatGoogleGenerativeAI(model=LLM_MODEL)
+
+
+def format_context(results: list) -> str:
+    """Junta os chunks recuperados em um único texto para o prompt."""
+    return "\n\n".join(doc.page_content for doc, _ in results)
+
+
+def search_prompt(question: str) -> str:
+    """Pipeline RAG: recupera contexto, monta o prompt e responde com o LLM.
+
+    Se nada for recuperado, devolve `FALLBACK_ANSWER` sem chamar o modelo.
+    """
+    results = retrieve(question)
+    if not results:
+        return FALLBACK_ANSWER
+
+    prompt = PROMPT_TEMPLATE.format(
+        contexto=format_context(results),
+        pergunta=question,
+    )
+    return get_llm().invoke(prompt).content
 
 
 if __name__ == "__main__":
     pergunta = sys.argv[1] if len(sys.argv) > 1 else "Qual é o assunto principal do documento?"
-    show_results(pergunta, retrieve(pergunta))
+    print(search_prompt(pergunta))
