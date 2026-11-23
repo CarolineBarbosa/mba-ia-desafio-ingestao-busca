@@ -93,7 +93,7 @@ def split_documents(docs: list) -> list:
 
 def get_embeddings() -> GoogleGenerativeAIEmbeddings:
     """Retorna o modelo de embeddings configurado em `EMBEDDING_MODEL`."""
-    print(f"Modelo de embeddings configurado: {EMBEDDING_MODEL}")
+    # print(f"Modelo de embeddings configurado: {EMBEDDING_MODEL}")
     return GoogleGenerativeAIEmbeddings(model=EMBEDDING_MODEL)
 
 
