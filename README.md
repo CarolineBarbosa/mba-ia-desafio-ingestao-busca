@@ -187,6 +187,13 @@ Crie um arquivo `.env` na raiz (a partir do `.env.example`) com:
 
 > Nunca faça commit do `.env` (contém a chave). O `.env.example` é o template seguro.
 
+## Decisões técnicas
+
+- **Rate limiting nos embeddings (tier gratuito do Gemini)**: o tier gratuito do Gemini tem um limite de ~30.000 tokens por minuto. A ingestão processa os chunks em lotes de `EMBEDDING_BATCH_SIZE` (10) e, antes de cada lote, estima os tokens e espera quando a soma ultrapassa `EMBEDDING_TOKENS_PER_MINUTE` (24.000, com margem de segurança). Isso evita erro de quota ao ingerir PDFs maiores.
+- **Modelo de embeddings `gemini-embedding-001`**: gera vetores de 3072 dimensões. Os modelos mais novos (`text-embedding-004`/`005`) retornam 404 na API v1beta usada pelo `langchain-google-genai`, então o `001` é o padrão.
+- **Fallback em duas camadas**: (1) se a busca vetorial não retorna nenhum chunk, o código responde `FALLBACK_ANSWER` sem chamar a LLM; (2) se o contexto não contém a resposta, o prompt instrui a LLM a responder a mesma mensagem. Isso garante que o RAG nunca invente informação.
+- **`pre_delete_collection=True` na ingestão**: recria a collection do zero a cada execução, evitando duplicatas quando a ingestão roda mais de uma vez.
+
 ## Testes
 
 Testes unitários (rodam sem rede e sem banco):
