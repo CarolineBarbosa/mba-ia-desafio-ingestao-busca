@@ -145,22 +145,63 @@ python -m pip install -r requirements.txt
 
 ## Ordem de execução
 
-1. Subir o banco de dados:
+1. Criar o ambiente virtual e instalar as dependências (seção "VirtualEnv para Python" acima).
+
+2. Criar o arquivo `.env` na raiz a partir do `.env.example` (veja "Variáveis de ambiente" abaixo).
+
+3. Subir o banco de dados (Postgres + pgVector):
 
 ```
 docker compose up -d
 ```
 
-2. Executar ingestão do PDF:
+4. Executar a ingestão do PDF:
 
 ```
 python src/ingest.py
 ```
 
-3. Rodar o chat:
+5. Rodar o chat:
 
 ```
 python src/chat.py
+```
+
+6. (Opcional) Fazer uma única pergunta sem abrir o chat:
+
+```
+python src/search.py "Sua pergunta"
+```
+
+## Variáveis de ambiente
+
+Crie um arquivo `.env` na raiz (a partir do `.env.example`) com:
+
+| Variável | Obrigatória | Valor padrão | Descrição |
+|---|---|---|---|
+| `GOOGLE_API_KEY` | Sim | — | Chave da API do Google AI Studio (Gemini) |
+| `EMBEDDING_MODEL` | Não | `models/gemini-embedding-001` | Modelo de embeddings (vetores de 3072 dimensões) |
+| `LLM_MODEL` | Não | `gemini-2.5-flash` | Modelo de chat (LLM) usado para responder |
+| `DATABASE_URL` | Não | `postgresql+psycopg://postgres:postgres@localhost:5432/rag` | Conexão com o Postgres |
+| `PDF_PATH` | Não | `document.pdf` | Caminho do PDF a ser ingerido |
+
+> Nunca faça commit do `.env` (contém a chave). O `.env.example` é o template seguro.
+
+## Testes
+
+Testes unitários (rodam sem rede e sem banco):
+
+```
+python -m unittest discover -s tests -v
+```
+
+## Reset do banco
+
+Para apagar todos os dados e recomeçar do zero (necessário ao trocar o modelo de embeddings, pois a dimensão dos vetores muda):
+
+```
+docker compose down -v
+docker compose up -d
 ```
 
 ## Entregável
