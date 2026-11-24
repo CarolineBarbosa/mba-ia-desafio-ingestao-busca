@@ -1,5 +1,4 @@
-"""Script de ingestão do PDF.
-
+"""PDF ingestion script.
 """
 import os
 import time
@@ -12,23 +11,23 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from config import DATABASE_URL, EMBEDDING_MODEL, PDF_PATH
 
-# Parâmetros de fatiamento (requisito do desafio).
+# Chunking parameters (assignment requirement).
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 150
 
-# Limite gratuito do Gemini: 30.000 tokens por minuto.
+# Gemini free-tier limit: 30,000 tokens per minute.
 EMBEDDING_BATCH_SIZE = 10
 EMBEDDING_TOKENS_PER_MINUTE = 24_000
 EMBEDDING_RATE_WINDOW_SECONDS = 60
 
-# Nome da coleção no pgVector (isola os documentos deste RAG).
+# pgVector collection name (isolates this RAG's documents).
 COLLECTION_NAME = "rag_documentos"
 
 
 def load_pdf(pdf_path: str) -> list:
-    """Lê o PDF em `pdf_path` e imprime logs (páginas, caracteres, amostra).
+    """Read the PDF at `pdf_path` and print logs (pages, chars, sample).
 
-    Devolve uma lista de `Document`, um por página.
+    Returns a list of `Document`, one per page.
     """
     loader = PyPDFLoader(pdf_path)
     docs = loader.load()
@@ -52,7 +51,7 @@ def load_pdf(pdf_path: str) -> list:
 
 
 def validate_pdf_path(pdf_path: str) -> None:
-    """Valida o caminho do PDF: definido, existente e sendo um arquivo."""
+    """Validate the PDF path: defined, existing and a regular file."""
     if not pdf_path:
         raise ValueError("PDF_PATH não está definido. Verifique o arquivo .env.")
 
@@ -64,9 +63,9 @@ def validate_pdf_path(pdf_path: str) -> None:
 
 
 def split_documents(docs: list) -> list:
-    """Fatia os documentos em chunks (CHUNK_SIZE caracteres, CHUNK_OVERLAP de overlap).
+    """Split documents into chunks (CHUNK_SIZE chars, CHUNK_OVERLAP overlap).
 
-    Devolve uma lista de `Document` menores, mantendo os metadados originais.
+    Returns a list of smaller `Document` objects, keeping original metadata.
     """
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=CHUNK_SIZE,
@@ -92,7 +91,7 @@ def split_documents(docs: list) -> list:
 
 
 def get_embeddings() -> GoogleGenerativeAIEmbeddings:
-    """Retorna o modelo de embeddings configurado em `EMBEDDING_MODEL`."""
+    """Return the embedding model configured in `EMBEDDING_MODEL`."""
     # print(f"Modelo de embeddings configurado: {EMBEDDING_MODEL}")
     return GoogleGenerativeAIEmbeddings(model=EMBEDDING_MODEL)
 
@@ -101,7 +100,7 @@ def wait_for_embedding_quota(
     recent_batches: deque[tuple[float, int]],
     estimated_tokens: int,
 ) -> None:
-    """Espera se os lotes recentes puderem exceder a cota por minuto."""
+    """Wait if recent batches could exceed the per-minute quota."""
     if estimated_tokens > EMBEDDING_TOKENS_PER_MINUTE:
         raise ValueError(
             "Um lote excede o limite de tokens por minuto configurado."
@@ -131,10 +130,10 @@ def wait_for_embedding_quota(
 
 
 def persist_chunks(chunks: list) -> None:
-    """Gera os embeddings dos chunks e persiste no pgVector.
+    """Embed the chunks and persist them into pgVector.
 
-    `pre_delete_collection=True` recria a coleção do zero, evitando
-    duplicatas quando a ingestão roda mais de uma vez.
+    `pre_delete_collection=True` recreates the collection from scratch,
+    avoiding duplicates when ingestion runs more than once.
     """
     embeddings = get_embeddings()
     vector_store = None
@@ -166,7 +165,7 @@ def persist_chunks(chunks: list) -> None:
 
 
 def ingest() -> list:
-    """Orquestra a ingestão: valida, lê, fatia e persiste no pgVector."""
+    """Orchestrate ingestion: validate, read, split and persist into pgVector."""
     validate_pdf_path(PDF_PATH)
     docs = load_pdf(PDF_PATH)
     chunks = split_documents(docs)

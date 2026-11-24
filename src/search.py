@@ -1,4 +1,4 @@
-"""Busca semântica: recupera chunks e responde com o LLM."""
+"""Semantic search: retrieve chunks and answer with the LLM."""
 import sys
 
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -34,16 +34,16 @@ PERGUNTA DO USUÁRIO:
 RESPONDA A "PERGUNTA DO USUÁRIO"
 """
 
-# Quantos chunks mais semelhantes retornar na busca.
+# How many most-similar chunks to return.
 TOP_K = 10
 
-# Resposta de fallback quando não há contexto suficiente.
-# Mantida em sincronia com o texto de fallback do PROMPT_TEMPLATE.
+# Fallback answer when there is not enough context.
+# Kept in sync with the fallback text in PROMPT_TEMPLATE.
 FALLBACK_ANSWER = "Não tenho informações necessárias para responder sua pergunta."
 
 
 def build_vector_store() -> PGVector:
-    """Conecta ao pgVector com a mesma coleção e modelo da ingestão."""
+    """Connect to pgVector with the same collection and model as ingestion."""
     return PGVector(
         embeddings=get_embeddings(),
         collection_name=COLLECTION_NAME,
@@ -53,16 +53,16 @@ def build_vector_store() -> PGVector:
 
 
 def retrieve(question: str, k: int = TOP_K) -> list:
-    """Retorna os `k` chunks mais semelhantes à pergunta e suas pontuações.
+    """Return the `k` chunks most similar to the question and their scores.
 
-    Devolve uma lista de `(Document, score)`. O score é uma distância:
-    quanto MENOR, mais semelhante (0 = idêntico).
+    Returns a list of `(Document, score)`. The score is a distance: the
+    LOWER it is, the more similar (0 = identical).
     """
     return build_vector_store().similarity_search_with_score(question, k=k)
 
 
 def show_results(question: str, results: list) -> None:
-    """Imprime a pergunta, os chunks recuperados e o score de cada um."""
+    """Print the question, the retrieved chunks and each score."""
     print(f"Pergunta: {question}")
     print(f"Chunks recuperados: {len(results)}")
     print()
@@ -73,19 +73,19 @@ def show_results(question: str, results: list) -> None:
 
 
 def get_llm() -> ChatGoogleGenerativeAI:
-    """Retorna o modelo de chat configurado em `LLM_MODEL`."""
+    """Return the chat model configured in `LLM_MODEL`."""
     return ChatGoogleGenerativeAI(model=LLM_MODEL)
 
 
 def format_context(results: list) -> str:
-    """Junta os chunks recuperados em um único texto para o prompt."""
+    """Join the retrieved chunks into a single text for the prompt."""
     return "\n\n".join(doc.page_content for doc, _ in results)
 
 
 def search_prompt(question: str) -> str:
-    """Pipeline RAG: recupera contexto, monta o prompt e responde com o LLM.
+    """RAG pipeline: retrieve context, build the prompt and answer with the LLM.
 
-    Se nada for recuperado, devolve `FALLBACK_ANSWER` sem chamar o modelo.
+    If nothing is retrieved, returns `FALLBACK_ANSWER` without calling the model.
     """
     results = retrieve(question)
     if not results:

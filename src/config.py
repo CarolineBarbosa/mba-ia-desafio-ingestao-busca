@@ -1,10 +1,10 @@
-"""Configuração central do projeto.
+"""Central project configuration.
 
-Carrega as variáveis do arquivo .env (não commitado) e expõe os valores
-necessários para ingestão e busca. Nenhum segredo é hardcoded aqui.
+Loads variables from the .env file (not committed) and exposes the values
+needed for ingestion and search. No secrets are hardcoded here.
 
-Convenção de importação: os scripts em src/ rodam com `python src/<script>.py`,
-então importam os módulos vizinhos sem o prefixo `src.` (ex.: `from config import ...`).
+Import convention: scripts under src/ run as `python src/<script>.py`, so they
+import sibling modules without the `src.` prefix (e.g. `from config import ...`).
 """
 import os
 
@@ -17,26 +17,26 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "models/gemini-embedding-001")
 LLM_MODEL = os.getenv("LLM_MODEL", "gemini-3.5-flash")
 
-# --- Banco de dados local (docker compose) ---
+# --- Local database (docker compose) ---
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
     "postgresql+psycopg://postgres:postgres@localhost:5432/rag",
 )
 
-# --- PDF de entrada ---
+# --- Input PDF ---
 PDF_PATH = os.getenv("PDF_PATH", "document.pdf")
 
-# Variáveis sem as quais a ingestão/busca não fazem sentido.
+# Variables without which ingestion/search make no sense.
 REQUIRED_VARS = ["GOOGLE_API_KEY"]
 
 
 def missing_vars() -> list[str]:
-    """Retorna as variáveis obrigatórias que não estão definidas."""
+    """Return the required variables that are not set."""
     return [name for name in REQUIRED_VARS if not os.getenv(name)]
 
 
 def validate() -> None:
-    """Levanta erro se alguma variável obrigatória estiver ausente."""
+    """Raise an error if any required variable is missing."""
     missing = missing_vars()
     if missing:
         raise RuntimeError(
@@ -47,7 +47,7 @@ def validate() -> None:
 
 
 if __name__ == "__main__":
-    # Nunca imprime a chave, apenas se ela está presente.
+    # Never prints the key, only whether it is set.
     print("Configuração carregada:")
     print(f"  GOOGLE_API_KEY definida: {bool(GOOGLE_API_KEY)}")
     print(f"  EMBEDDING_MODEL: {EMBEDDING_MODEL}")

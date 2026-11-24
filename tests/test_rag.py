@@ -1,9 +1,9 @@
-"""Testes unitários (offline) das partes determinísticas do RAG.
+"""Offline unit tests for the deterministic parts of the RAG.
 
-Não exigem rede nem banco: cobrem a validação de configuração, a validação
-do caminho do PDF, o fatiamento de chunks e a formatação de contexto.
+They require no network or database: they cover config validation, PDF
+path validation, chunk splitting and context formatting.
 
-Rodar com:
+Run with:
     venv/bin/python -m unittest discover -s tests -v
 """
 import os
