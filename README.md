@@ -181,7 +181,7 @@ Crie um arquivo `.env` na raiz (a partir do `.env.example`) com:
 |---|---|---|---|
 | `GOOGLE_API_KEY` | Sim | — | Chave da API do Google AI Studio (Gemini) |
 | `EMBEDDING_MODEL` | Não | `models/gemini-embedding-001` | Modelo de embeddings (vetores de 3072 dimensões) |
-| `LLM_MODEL` | Não | `gemini-2.5-flash` | Modelo de chat (LLM) usado para responder |
+| `LLM_MODEL` | Não | `gemini-3.5-flash` | Modelo de chat (LLM) usado para responder |
 | `DATABASE_URL` | Não | `postgresql+psycopg://postgres:postgres@localhost:5432/rag` | Conexão com o Postgres |
 | `PDF_PATH` | Não | `document.pdf` | Caminho do PDF a ser ingerido |
 
